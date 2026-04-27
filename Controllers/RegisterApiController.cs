@@ -138,7 +138,7 @@ namespace VMeetTool.Controllers
                     new SqlParameter("@expires_at",   SqlDbType.DateTime)      { Value = expires }
                 };
 
-                DataTable result = DbHelper.ExecuteStoredProcedure("sp_forgot_password", parameters);
+                DataTable result = DbHelper.ExecuteStoredProcedure("vcadmin.sp_forgot_password", parameters);
 
                 if (result == null || result.Rows.Count == 0)
                     return InternalServerError(new Exception("Unexpected error processing request."));
@@ -183,7 +183,7 @@ namespace VMeetTool.Controllers
                     new SqlParameter("@new_password", SqlDbType.VarBinary,   -1) { Value = newPasswordHash }
                 };
 
-                DataTable result = DbHelper.ExecuteStoredProcedure("sp_reset_password", parameters);
+                DataTable result = DbHelper.ExecuteStoredProcedure("vcadmin.sp_reset_password", parameters);
 
                 if (result == null || result.Rows.Count == 0)
                     return InternalServerError(new Exception("Unexpected error processing request."));
