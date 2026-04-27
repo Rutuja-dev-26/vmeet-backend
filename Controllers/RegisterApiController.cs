@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Security.Cryptography;
@@ -117,12 +118,118 @@ namespace VMeetTool.Controllers
             }
         }
 
+        // ✅ FORGOT PASSWORD API
+        [HttpPost]
+        [Route("forgot-password")]
+        public IHttpActionResult ForgotPassword([FromBody] ForgotPasswordRequestModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                string token     = GenerateSecureToken();
+                DateTime expires = DateTime.UtcNow.AddMinutes(15);
+
+                var parameters = new[]
+                {
+                    new SqlParameter("@user_mail_id", SqlDbType.VarChar,  255) { Value = model.user_mail_id.Trim().ToLower() },
+                    new SqlParameter("@token",        SqlDbType.VarChar,  256) { Value = token },
+                    new SqlParameter("@expires_at",   SqlDbType.DateTime)      { Value = expires }
+                };
+
+                DataTable result = DbHelper.ExecuteStoredProcedure("sp_forgot_password", parameters);
+
+                if (result == null || result.Rows.Count == 0)
+                    return InternalServerError(new Exception("Unexpected error processing request."));
+
+                DataRow row    = result.Rows[0];
+                string status  = row["status"]?.ToString();
+                string message = row["message"]?.ToString();
+
+                if (status == "not_found")
+                    return Content(System.Net.HttpStatusCode.NotFound, ApiResponseModel.Failure(message));
+
+                // Build reset link and send email
+                string fullName     = row["user_fullname"]?.ToString() ?? "";
+                string frontendBase = ConfigurationManager.AppSettings["FrontendBaseUrl"]?.TrimEnd('/');
+                string resetLink    = $"{frontendBase}/reset-password?token={Uri.EscapeDataString(token)}";
+
+                EmailHelper.SendPasswordResetEmail(model.user_mail_id.Trim().ToLower(), fullName, resetLink);
+
+                return Ok(ApiResponseModel.Success("Password reset link has been sent to your email address."));
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        // ✅ RESET PASSWORD API
+        [HttpPost]
+        [Route("reset-password")]
+        public IHttpActionResult ResetPassword([FromBody] ResetPasswordRequestModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                byte[] newPasswordHash = HashPassword(model.new_password);
+
+                var parameters = new[]
+                {
+                    new SqlParameter("@token",        SqlDbType.VarChar,    256) { Value = model.token.Trim() },
+                    new SqlParameter("@new_password", SqlDbType.VarBinary,   -1) { Value = newPasswordHash }
+                };
+
+                DataTable result = DbHelper.ExecuteStoredProcedure("sp_reset_password", parameters);
+
+                if (result == null || result.Rows.Count == 0)
+                    return InternalServerError(new Exception("Unexpected error processing request."));
+
+                DataRow row    = result.Rows[0];
+                string status  = row["status"]?.ToString();
+                string message = row["message"]?.ToString();
+
+                switch (status)
+                {
+                    case "success":
+                        return Ok(ApiResponseModel.Success(message));
+                    case "expired":
+                        return Content(System.Net.HttpStatusCode.Gone, ApiResponseModel.Failure(message));
+                    case "used":
+                        return Content(System.Net.HttpStatusCode.Conflict, ApiResponseModel.Failure(message));
+                    default: // "invalid"
+                        return Content(System.Net.HttpStatusCode.BadRequest, ApiResponseModel.Failure(message));
+                }
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
         // ✅ COMMON HASH METHOD
         private static byte[] HashPassword(string plainTextPassword)
         {
             using (var sha256 = SHA256.Create())
             {
                 return sha256.ComputeHash(Encoding.UTF8.GetBytes(plainTextPassword));
+            }
+        }
+
+        private static string GenerateSecureToken()
+        {
+            using (var rng = new RNGCryptoServiceProvider())
+            {
+                byte[] bytes = new byte[32];
+                rng.GetBytes(bytes);
+                // URL-safe Base64 (no +, /, =)
+                return Convert.ToBase64String(bytes)
+                    .Replace("+", "-")
+                    .Replace("/", "_")
+                    .Replace("=", "");
             }
         }
     }
