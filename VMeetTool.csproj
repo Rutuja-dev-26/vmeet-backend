@@ -205,8 +205,11 @@
     <Compile Include="Models\Createmeetingrequestmodel.cs" />
     <Compile Include="Models\JoinMeetingRequestModel.cs" />
     <Compile Include="Models\loginresponce.cs" />
+    <Compile Include="Models\ForgotPasswordRequestModel.cs" />
     <Compile Include="Models\RegisterRequestModel.cs" />
+    <Compile Include="Models\ResetPasswordRequestModel.cs" />
     <Compile Include="Models\TokenResponseModel.cs" />
+    <Compile Include="Helpers\EmailHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
