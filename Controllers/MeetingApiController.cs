@@ -149,6 +149,7 @@ namespace VMeetTool.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+
             try
             {
                 var parameters = new[]
@@ -178,9 +179,6 @@ namespace VMeetTool.Controllers
             catch (Exception ex) { return InternalServerError(ex); }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // Helper
-        // ─────────────────────────────────────────────────────────────
         private static string GenerateMeetingCode()
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
