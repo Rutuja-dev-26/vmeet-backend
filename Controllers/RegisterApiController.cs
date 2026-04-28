@@ -129,7 +129,7 @@ namespace VMeetTool.Controllers
             try
             {
                 string token     = GenerateSecureToken();
-                DateTime expires = DateTime.UtcNow.AddMinutes(15);
+                DateTime expires = DateTime.Now.AddMinutes(15);
 
                 var parameters = new[]
                 {
