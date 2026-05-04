@@ -1,26 +1,46 @@
 -- ============================================================
--- VMeet - Forgot Password Stored Procedures
--- Uses existing tables: vcadmin.passm, vcadmin.password_reset
--- Token generation and expiry handled entirely in SQL (no C# datetime)
--- Run this script on your SQL Server database (vmeet)
+-- VMeet - Forgot Password Setup
+-- Run this on your SQL Server database (vmeet)
 -- ============================================================
 
 USE vmeet;
 GO
 
 -- ---------------------------------------------------------------
+-- TABLE: vcadmin.password_reset
+-- Stores short-lived (15 min) one-time reset tokens.
+-- ---------------------------------------------------------------
+IF OBJECT_ID('vcadmin.password_reset', 'U') IS NULL
+BEGIN
+    CREATE TABLE [vcadmin].[password_reset] (
+        id             INT IDENTITY(1,1) PRIMARY KEY,
+        user_id        INT           NOT NULL,
+        reset_token    VARCHAR(256)  NOT NULL,
+        expiry_date    DATETIME      NOT NULL,
+        is_used        BIT           NOT NULL DEFAULT 0,
+        is_active      BIT           NOT NULL DEFAULT 1,
+        inserted_by    INT           NULL,
+        inserted_date  DATETIME      NOT NULL DEFAULT GETDATE(),
+        updated_by     INT           NULL,
+        updated_date   DATETIME      NOT NULL DEFAULT GETDATE()
+    );
+    CREATE UNIQUE INDEX UX_password_reset_token ON [vcadmin].[password_reset] (reset_token);
+    PRINT 'Table vcadmin.password_reset created.';
+END
+ELSE
+    PRINT 'Table vcadmin.password_reset already exists.';
+GO
+
+-- ---------------------------------------------------------------
 -- SP: vcadmin.sp_forgot_password
 --
--- 1. Looks up the user by email
--- 2. Generates a unique reset token using NEWID() inside SQL
--- 3. Sets expiry to DATEADD(MINUTE, 15, GETDATE()) — all in SQL time
+-- 1. Looks up the user by email in vcadmin.usersm
+-- 2. Generates a unique reset token using NEWID()
+-- 3. Expiry = DATEADD(MINUTE, 15, GETDATE())
 -- 4. Invalidates previous unused tokens for the user
 -- 5. Inserts new token into vcadmin.password_reset
 --
--- Input : @user_mail_id only — no token or datetime from C#
 -- Returns: status, message, user_id, user_fullname, reset_token
---
--- ⚠️  Verify your user table name below (currently vcadmin.userm)
 -- ---------------------------------------------------------------
 IF OBJECT_ID('vcadmin.sp_forgot_password', 'P') IS NOT NULL
     DROP PROCEDURE vcadmin.sp_forgot_password;
@@ -37,14 +57,13 @@ BEGIN
     DECLARE @reset_token   VARCHAR(256);
     DECLARE @expiry_date   DATETIME;
 
-    -- ⚠️ Verify table name: [vcadmin].[userm]
     SELECT @user_id       = user_id,
            @user_fullname = user_fullname
-    FROM   [vcadmin].[userm]
+    FROM   [vcadmin].[usersm]
     WHERE  user_mail_id = @user_mail_id
       AND  is_active    = 1;
 
-    -- Email not found / account not active
+    -- Email not found or account not active
     IF @user_id IS NULL
     BEGIN
         SELECT 'not_found' AS status,
@@ -55,7 +74,7 @@ BEGIN
         RETURN;
     END
 
-    -- Generate token and expiry entirely in SQL — no timezone mismatch
+    -- Generate token and expiry entirely in SQL
     SET @reset_token = LOWER(REPLACE(CONVERT(VARCHAR(36), NEWID()), '-', ''));
     SET @expiry_date = DATEADD(MINUTE, 15, GETDATE());
 
@@ -87,9 +106,9 @@ GO
 -- SP: vcadmin.sp_reset_password
 --
 -- 1. Finds and validates the token in vcadmin.password_reset
--- 2. Expiry checked with GETDATE() — fully in SQL time
+-- 2. Expiry checked with GETDATE()
 -- 3. Updates password in vcadmin.passm
--- 4. Marks token as used
+-- 4. Marks token as used / inactive
 --
 -- Returns: status, message
 -- ---------------------------------------------------------------
@@ -116,7 +135,7 @@ BEGIN
     FROM   [vcadmin].[password_reset]
     WHERE  reset_token = @token;
 
-    -- Token does not exist
+    -- Token not found
     IF @user_id IS NULL
     BEGIN
         SELECT 'invalid' AS status,
@@ -132,7 +151,7 @@ BEGIN
         RETURN;
     END
 
-    -- Token expired — GETDATE() is the same clock that set expiry_date
+    -- Token expired
     IF @expiry_date < GETDATE()
     BEGIN
         SELECT 'expired' AS status,
@@ -140,7 +159,7 @@ BEGIN
         RETURN;
     END
 
-    -- Update password in vcadmin.passm
+    -- Update password
     UPDATE [vcadmin].[passm]
     SET    password     = @new_password,
            updated_by   = @user_id,
@@ -161,4 +180,4 @@ BEGIN
 END
 GO
 
-PRINT 'sp_forgot_password and sp_reset_password updated successfully.';
+PRINT 'ForgotPassword_Setup completed successfully.';

@@ -179,6 +179,49 @@ namespace VMeetTool.Controllers
         }
 
         // ─────────────────────────────────────────────────────────────
+        // GET api/meeting/list/{user_id}
+        // ─────────────────────────────────────────────────────────────
+        [HttpGet]
+        [Route("list/{user_id:int}")]
+        public IHttpActionResult GetUserMeetings(int user_id)
+        {
+            if (user_id <= 0)
+                return BadRequest("Invalid user_id.");
+
+            try
+            {
+                var parameters = new[]
+                {
+                    new SqlParameter("@user_id", SqlDbType.Int) { Value = user_id }
+                };
+
+                DataTable result = DbHelper.ExecuteStoredProcedure("vcadmin.sp_get_user_meetings", parameters);
+
+                var meetings = new System.Collections.Generic.List<object>();
+                if (result != null)
+                {
+                    foreach (DataRow row in result.Rows)
+                    {
+                        meetings.Add(new
+                        {
+                            meeting_id   = row["meeting_id"],
+                            host_user_id = row["host_user_id"],
+                            title        = row["title"]?.ToString(),
+                            description  = row["description"]?.ToString(),
+                            meeting_code = row["meeting_code"]?.ToString(),
+                            start_time   = row["start_time"]?.ToString(),
+                            end_time     = row["end_time"]?.ToString()
+                        });
+                    }
+                }
+
+                return Ok(ApiResponseModel.Success("Meetings fetched", meetings));
+            }
+            catch (SqlException sqlEx) { return InternalServerError(sqlEx); }
+            catch (Exception ex)      { return InternalServerError(ex); }
+        }
+
+        // ─────────────────────────────────────────────────────────────
         // Helper
         // ─────────────────────────────────────────────────────────────
         private static string GenerateMeetingCode()

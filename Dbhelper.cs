@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -27,7 +27,7 @@ namespace VMeetTool.Helpers
             var dt = new DataTable();
 
             using (var conn = new SqlConnection(ConnectionString))
-            using (var cmd = new SqlCommand(procedureName, conn))
+            using (var cmd  = new SqlCommand(procedureName, conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
@@ -43,6 +43,44 @@ namespace VMeetTool.Helpers
             }
 
             return dt;
+        }
+
+        public static DataTable ExecuteQuery(string sql, SqlParameter[] parameters = null)
+        {
+            var dt = new DataTable();
+
+            using (var conn = new SqlConnection(ConnectionString))
+            using (var cmd  = new SqlCommand(sql, conn))
+            {
+                cmd.CommandType = CommandType.Text;
+
+                if (parameters != null)
+                    cmd.Parameters.AddRange(parameters);
+
+                conn.Open();
+
+                using (var adapter = new SqlDataAdapter(cmd))
+                {
+                    adapter.Fill(dt);
+                }
+            }
+
+            return dt;
+        }
+
+        public static int ExecuteNonQuery(string sql, SqlParameter[] parameters = null)
+        {
+            using (var conn = new SqlConnection(ConnectionString))
+            using (var cmd  = new SqlCommand(sql, conn))
+            {
+                cmd.CommandType = CommandType.Text;
+
+                if (parameters != null)
+                    cmd.Parameters.AddRange(parameters);
+
+                conn.Open();
+                return cmd.ExecuteNonQuery();
+            }
         }
     }
 }

@@ -9,7 +9,8 @@ namespace VMeetTool
     {
         public static void Register(HttpConfiguration config)
         {
-            // Web API configuration and services
+            // Always include full exception details in responses (safe for dev/internal)
+            config.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
             // Web API routes
             config.MapHttpAttributeRoutes();
