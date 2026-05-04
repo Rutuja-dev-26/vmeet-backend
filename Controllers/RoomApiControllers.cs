@@ -96,7 +96,7 @@ namespace VMeetTool.Controllers
             }
             catch (SqlException sqlEx) { return InternalServerError(sqlEx); }
             catch (Exception ex) { return InternalServerError(ex); }
-        }`
+        }
                                  
         // ─────────────────────────────────────────────────────────────
         // POST api/room/join
