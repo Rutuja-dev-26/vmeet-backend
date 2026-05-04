@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace VMeetTool.Models
 {
@@ -6,12 +6,16 @@ namespace VMeetTool.Models
     {
         [Required(ErrorMessage = "Full name is required.")]
         [StringLength(255)]
-        public string user_fullname { get; set; }
+        public string fullName { get; set; }
 
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress(ErrorMessage = "Invalid email format.")]
         [StringLength(255)]
-        public string user_mail_id { get; set; }
+        public string email { get; set; }
+
+        [Required(ErrorMessage = "Mobile number is required.")]
+        [StringLength(20)]
+        public string phone { get; set; }
 
         [Required(ErrorMessage = "Contact details is required.")]
         [StringLength(10, MinimumLength = 10, ErrorMessage = "Contact number must be exactly 10 digits.")]
