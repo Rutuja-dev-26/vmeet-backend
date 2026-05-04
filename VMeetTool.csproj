@@ -195,6 +195,7 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\MeetingApiController.cs" />
     <Compile Include="Controllers\RegisterApiController.cs" />
+    <Compile Include="Controllers\RoomApiControllers.cs" />
     <Compile Include="Dbhelper.cs" />
     <Compile Include="Filters\JwtAuthorizeAttribute.cs" />
     <Compile Include="Global.asax.cs">
@@ -203,7 +204,9 @@
     <Compile Include="JwtHelper.cs" />
     <Compile Include="Models\Apiresponsemodel.cs" />
     <Compile Include="Models\Createmeetingrequestmodel.cs" />
+    <Compile Include="Models\CreateRoomRequestModel.cs" />
     <Compile Include="Models\JoinMeetingRequestModel.cs" />
+    <Compile Include="Models\JoinRoomRequestModel.cs" />
     <Compile Include="Models\loginresponce.cs" />
     <Compile Include="Models\RegisterRequestModel.cs" />
     <Compile Include="Models\TokenResponseModel.cs" />

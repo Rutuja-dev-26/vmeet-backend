@@ -26,24 +26,50 @@ namespace VMeetTool.Controllers
 
                 var parameters = new[]
                 {
-                    new SqlParameter("@user_name", SqlDbType.VarChar, 100) { Value = model.user_name.Trim() },
-                    new SqlParameter("@user_fullname", SqlDbType.VarChar, 255) { Value = model.user_fullname.Trim() },
-                    new SqlParameter("@user_mail_id", SqlDbType.VarChar, 255) { Value = model.user_mail_id.Trim().ToLower() },
-                    new SqlParameter("@password", SqlDbType.VarBinary, -1) { Value = passwordHash }
+                    new SqlParameter("@user_fullname",   SqlDbType.VarChar,   255) { Value = model.user_fullname.Trim() },
+                    new SqlParameter("@user_mail_id",    SqlDbType.VarChar,   255) { Value = model.user_mail_id.Trim().ToLower() },
+                    new SqlParameter("@contact_details", SqlDbType.VarChar,    20) { Value = model.contact_details.Trim() },
+                    new SqlParameter("@password",        SqlDbType.VarBinary,  -1) { Value = passwordHash }
                 };
 
-                DataTable result = DbHelper.ExecuteStoredProcedure("sp_register_user", parameters);
+                DataTable result = DbHelper.ExecuteStoredProcedure("vcadmin.sp_register_user", parameters);
 
-                if (result != null && result.Rows.Count > 0)
+                if (result == null || result.Rows.Count == 0)
+                    return InternalServerError(new Exception("Registration failed: no response from database."));
+
+                DataRow row = result.Rows[0];
+                string status = row["status"]?.ToString();
+                string spMessage = row["message"]?.ToString();
+
+              
+                if (status == "email_exists" || status == "phone_exists")
+                    return Content(System.Net.HttpStatusCode.Conflict,
+                                   ApiResponseModel.Failure(spMessage));
+
+                if (status != "success")
+                    return InternalServerError(new Exception(spMessage ?? "Registration failed."));
+
+                int newUserId = Convert.ToInt32(row["user_id"]);
+                string userName = model.user_mail_id.Trim().ToLower().Split('@')[0];
+
+                string token = JwtHelper.GenerateToken(
+                    newUserId,
+                    userName,
+                    model.user_mail_id.Trim().ToLower(),
+                    model.user_fullname.Trim()
+                );
+
+                var tokenResponse = new TokenResponseModel
                 {
-                    DataRow row = result.Rows[0];
-                    string spMessage = row["message"]?.ToString();
-                    int newUserId = Convert.ToInt32(row["user_id"]);
+                    token = token,
+                    token_type = "Bearer",
+                    expires_in = JwtHelper.ExpirySeconds,
+                    user_id = newUserId,
+                    user_fullname = model.user_fullname.Trim(),
+                    user_mail_id = model.user_mail_id.Trim().ToLower()
+                };
 
-                    return Ok(ApiResponseModel.Success(spMessage, new { user_id = newUserId }));
-                }
-
-                return InternalServerError(new Exception("Registration failed"));
+                return Ok(ApiResponseModel.Success(spMessage, tokenResponse));
             }
             catch (Exception ex)
             {
@@ -75,7 +101,6 @@ namespace VMeetTool.Controllers
                 {
                     var row = result.Rows[0];
 
-                    // ✅ Read 'status' column, not 'message'
                     string status = row["status"]?.ToString();
                     string message = row["message"]?.ToString();
 
