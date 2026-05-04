@@ -69,7 +69,7 @@ namespace VMeetTool.Controllers
                         int    uid   = Convert.ToInt32(row["user_id"]);
                         string email = model.email.Trim().ToLower();
                         string fname = model.fullName.Trim();
-                        string uname = email.Split('@')[0];          // auto-generated username
+                        string uname = email.Split('@')[0];
                         return Ok(ApiResponseModel.Success(msg, BuildAuthResponse(uid, uname, email, fname, (model.phone ?? "").Trim())));
 
                     case "email_exists":

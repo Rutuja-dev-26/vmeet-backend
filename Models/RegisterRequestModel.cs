@@ -17,6 +17,11 @@ namespace VMeetTool.Models
         [StringLength(20)]
         public string phone { get; set; }
 
+        [Required(ErrorMessage = "Contact details is required.")]
+        [StringLength(10, MinimumLength = 10, ErrorMessage = "Contact number must be exactly 10 digits.")]
+        [RegularExpression(@"^[0-9]{10}$", ErrorMessage = "Contact number must be exactly 10 numeric digits.")]
+        public string contact_details { get; set; }
+
         [Required(ErrorMessage = "Password is required.")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
         public string password { get; set; }
